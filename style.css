@@ -1,1 +1,747 @@
+"use strict";
 
+const SAVE_KEY = "gtaWebOnline3DSave";
+
+const menu = document.getElementById("menu");
+const hud = document.getElementById("hud");
+const controles = document.getElementById("controles");
+const mensagem = document.getElementById("mensagem");
+
+const nomeInput = document.getElementById("nomeInput");
+const nomeHud = document.getElementById("nomeHud");
+const vidaHud = document.getElementById("vidaHud");
+const dinheiroHud = document.getElementById("dinheiroHud");
+const missaoHud = document.getElementById("missaoHud");
+
+const jogarBtn = document.getElementById("jogarBtn");
+const continuarBtn = document.getElementById("continuarBtn");
+const apagarBtn = document.getElementById("apagarBtn");
+
+let scene;
+let camera;
+let renderer;
+let clock;
+
+let jogador;
+let carro;
+let marcador;
+
+let jogoIniciado = false;
+let dentroDoCarro = false;
+
+let nomeJogador = "Jogador";
+let dinheiro = 0;
+let vida = 100;
+let missaoAtual = 0;
+
+const teclas = {};
+const obstaculos = [];
+
+const pontosMissoes = [
+    new THREE.Vector3(50, 0.2, 45),
+    new THREE.Vector3(-55, 0.2, 50),
+    new THREE.Vector3(-50, 0.2, -55),
+    new THREE.Vector3(55, 0.2, -50)
+];
+
+iniciarThree();
+
+function iniciarThree() {
+    scene = new THREE.Scene();
+
+    scene.background = new THREE.Color(0x87ceeb);
+    scene.fog = new THREE.Fog(0x87ceeb, 100, 350);
+
+    camera = new THREE.PerspectiveCamera(
+        65,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+    );
+
+    renderer = new THREE.WebGLRenderer({
+        antialias: true
+    });
+
+    renderer.setSize(
+        window.innerWidth,
+        window.innerHeight
+    );
+
+    renderer.setPixelRatio(
+        Math.min(window.devicePixelRatio, 2)
+    );
+
+    renderer.shadowMap.enabled = true;
+
+    document.body.appendChild(
+        renderer.domElement
+    );
+
+    clock = new THREE.Clock();
+
+    criarLuzes();
+    criarCidade();
+    criarJogador();
+    criarCarro();
+    criarMarcador();
+
+    camera.position.set(0, 8, 12);
+
+    document.addEventListener("keydown", aoPressionar);
+    document.addEventListener("keyup", aoSoltar);
+
+    window.addEventListener("resize", redimensionar);
+
+    jogarBtn.addEventListener("click", novoJogo);
+    continuarBtn.addEventListener("click", continuarJogo);
+    apagarBtn.addEventListener("click", apagarSave);
+
+    animar();
+}
+
+function criarLuzes() {
+    const luzAmbiente = new THREE.HemisphereLight(
+        0xccecff,
+        0x304030,
+        2
+    );
+
+    scene.add(luzAmbiente);
+
+    const sol = new THREE.DirectionalLight(
+        0xffffff,
+        2.8
+    );
+
+    sol.position.set(80, 120, 60);
+    sol.castShadow = true;
+
+    scene.add(sol);
+}
+
+function criarCidade() {
+    const chao = new THREE.Mesh(
+        new THREE.PlaneGeometry(400, 400),
+        new THREE.MeshStandardMaterial({
+            color: 0x4d9b52
+        })
+    );
+
+    chao.rotation.x = -Math.PI / 2;
+    chao.receiveShadow = true;
+
+    scene.add(chao);
+
+    criarRua(0, 0, 400, 22);
+    criarRua(0, 0, 22, 400);
+    criarRua(0, 80, 400, 18);
+    criarRua(0, -80, 400, 18);
+    criarRua(80, 0, 18, 400);
+    criarRua(-80, 0, 18, 400);
+
+    for (let x = -170; x <= 170; x += 38) {
+        for (let z = -170; z <= 170; z += 38) {
+            const pertoRuaX =
+                Math.abs(x) < 20 ||
+                Math.abs(Math.abs(x) - 80) < 18;
+
+            const pertoRuaZ =
+                Math.abs(z) < 20 ||
+                Math.abs(Math.abs(z) - 80) < 18;
+
+            if (!pertoRuaX && !pertoRuaZ) {
+                criarPredio(x, z);
+            }
+        }
+    }
+
+    for (let i = 0; i < 45; i++) {
+        criarArvore(
+            THREE.MathUtils.randFloatSpread(350),
+            THREE.MathUtils.randFloatSpread(350)
+        );
+    }
+}
+
+function criarRua(x, z, largura, profundidade) {
+    const rua = new THREE.Mesh(
+        new THREE.BoxGeometry(
+            largura,
+            0.12,
+            profundidade
+        ),
+        new THREE.MeshStandardMaterial({
+            color: 0x30343a
+        })
+    );
+
+    rua.position.set(x, 0.06, z);
+    rua.receiveShadow = true;
+
+    scene.add(rua);
+}
+
+function criarPredio(x, z) {
+    const altura = THREE.MathUtils.randFloat(12, 35);
+    const largura = THREE.MathUtils.randFloat(16, 23);
+    const profundidade = THREE.MathUtils.randFloat(16, 23);
+
+    const cores = [
+        0x8594a6,
+        0xb58b70,
+        0x8a9c82,
+        0x9e927c,
+        0x76879a
+    ];
+
+    const predio = new THREE.Mesh(
+        new THREE.BoxGeometry(
+            largura,
+            altura,
+            profundidade
+        ),
+        new THREE.MeshStandardMaterial({
+            color: cores[
+                Math.floor(Math.random() * cores.length)
+            ]
+        })
+    );
+
+    predio.position.set(
+        x,
+        altura / 2,
+        z
+    );
+
+    predio.castShadow = true;
+    predio.receiveShadow = true;
+
+    scene.add(predio);
+
+    obstaculos.push({
+        x,
+        z,
+        largura,
+        profundidade
+    });
+}
+
+function criarArvore(x, z) {
+    if (
+        Math.abs(x) < 14 ||
+        Math.abs(z) < 14 ||
+        Math.abs(Math.abs(x) - 80) < 12 ||
+        Math.abs(Math.abs(z) - 80) < 12
+    ) {
+        return;
+    }
+
+    const tronco = new THREE.Mesh(
+        new THREE.CylinderGeometry(
+            0.45,
+            0.6,
+            3,
+            8
+        ),
+        new THREE.MeshStandardMaterial({
+            color: 0x75431e
+        })
+    );
+
+    tronco.position.set(x, 1.5, z);
+    tronco.castShadow = true;
+
+    const folhas = new THREE.Mesh(
+        new THREE.SphereGeometry(
+            2.2,
+            10,
+            8
+        ),
+        new THREE.MeshStandardMaterial({
+            color: 0x1f7a32
+        })
+    );
+
+    folhas.position.set(x, 4, z);
+    folhas.castShadow = true;
+
+    scene.add(tronco);
+    scene.add(folhas);
+}
+
+function criarJogador() {
+    jogador = new THREE.Group();
+
+    const corpo = new THREE.Mesh(
+        new THREE.BoxGeometry(1.1, 1.5, 0.7),
+        new THREE.MeshStandardMaterial({
+            color: 0x1769d2
+        })
+    );
+
+    corpo.position.y = 1.45;
+
+    const cabeca = new THREE.Mesh(
+        new THREE.SphereGeometry(0.42, 16, 12),
+        new THREE.MeshStandardMaterial({
+            color: 0xe2ad7b
+        })
+    );
+
+    cabeca.position.y = 2.65;
+
+    corpo.castShadow = true;
+    cabeca.castShadow = true;
+
+    jogador.add(corpo);
+    jogador.add(cabeca);
+
+    jogador.position.set(0, 0, 15);
+
+    scene.add(jogador);
+}
+
+function criarCarro() {
+    carro = new THREE.Group();
+
+    const base = new THREE.Mesh(
+        new THREE.BoxGeometry(3.3, 0.75, 5.6),
+        new THREE.MeshStandardMaterial({
+            color: 0xd62424
+        })
+    );
+
+    base.position.y = 0.75;
+
+    const teto = new THREE.Mesh(
+        new THREE.BoxGeometry(2.7, 0.8, 2.7),
+        new THREE.MeshStandardMaterial({
+            color: 0x9f1717
+        })
+    );
+
+    teto.position.set(0, 1.45, -0.2);
+
+    carro.add(base);
+    carro.add(teto);
+
+    const materialRoda = new THREE.MeshStandardMaterial({
+        color: 0x151515
+    });
+
+    const posicoes = [
+        [-1.7, 0.55, 1.8],
+        [1.7, 0.55, 1.8],
+        [-1.7, 0.55, -1.8],
+        [1.7, 0.55, -1.8]
+    ];
+
+    posicoes.forEach(posicao => {
+        const roda = new THREE.Mesh(
+            new THREE.CylinderGeometry(
+                0.55,
+                0.55,
+                0.4,
+                14
+            ),
+            materialRoda
+        );
+
+        roda.rotation.z = Math.PI / 2;
+        roda.position.set(...posicao);
+
+        carro.add(roda);
+    });
+
+    carro.position.set(8, 0, 8);
+
+    scene.add(carro);
+}
+
+function criarMarcador() {
+    marcador = new THREE.Mesh(
+        new THREE.CylinderGeometry(
+            3,
+            3,
+            0.25,
+            32
+        ),
+        new THREE.MeshStandardMaterial({
+            color: 0xffdd00,
+            emissive: 0x665500
+        })
+    );
+
+    marcador.position.copy(
+        pontosMissoes[missaoAtual]
+    );
+
+    scene.add(marcador);
+}
+
+function novoJogo() {
+    const nome = nomeInput.value.trim();
+
+    if (!nome) {
+        alert("Digite um nome para jogar.");
+        return;
+    }
+
+    nomeJogador = nome;
+    dinheiro = 0;
+    vida = 100;
+    missaoAtual = 0;
+    dentroDoCarro = false;
+
+    jogador.position.set(0, 0, 15);
+    carro.position.set(8, 0, 8);
+    carro.rotation.y = 0;
+
+    marcador.position.copy(
+        pontosMissoes[missaoAtual]
+    );
+
+    iniciarJogo();
+    salvarJogo();
+}
+
+function continuarJogo() {
+    const save = localStorage.getItem(SAVE_KEY);
+
+    if (!save) {
+        alert("Nenhum jogo salvo foi encontrado.");
+        return;
+    }
+
+    try {
+        const dados = JSON.parse(save);
+
+        nomeJogador = dados.nome || "Jogador";
+        dinheiro = Number(dados.dinheiro) || 0;
+        vida = Number(dados.vida) || 100;
+        missaoAtual = Number(dados.missao) || 0;
+
+        jogador.position.set(
+            Number(dados.jogadorX) || 0,
+            0,
+            Number(dados.jogadorZ) || 15
+        );
+
+        carro.position.set(
+            Number(dados.carroX) || 8,
+            0,
+            Number(dados.carroZ) || 8
+        );
+
+        carro.rotation.y =
+            Number(dados.carroRotacao) || 0;
+
+        marcador.position.copy(
+            pontosMissoes[
+                missaoAtual % pontosMissoes.length
+            ]
+        );
+
+        iniciarJogo();
+    } catch (erro) {
+        console.error(erro);
+        alert("O save está com erro. Apague e crie um novo.");
+    }
+}
+
+function iniciarJogo() {
+    jogoIniciado = true;
+
+    menu.classList.add("oculto");
+    hud.classList.remove("oculto");
+    controles.classList.remove("oculto");
+
+    atualizarHUD();
+}
+
+function apagarSave() {
+    localStorage.removeItem(SAVE_KEY);
+
+    alert("Save apagado.");
+}
+
+function salvarJogo() {
+    if (!jogoIniciado) {
+        return;
+    }
+
+    const dados = {
+        nome: nomeJogador,
+        dinheiro,
+        vida,
+        missao: missaoAtual,
+
+        jogadorX: jogador.position.x,
+        jogadorZ: jogador.position.z,
+
+        carroX: carro.position.x,
+        carroZ: carro.position.z,
+        carroRotacao: carro.rotation.y
+    };
+
+    localStorage.setItem(
+        SAVE_KEY,
+        JSON.stringify(dados)
+    );
+}
+
+function aoPressionar(evento) {
+    teclas[evento.key.toLowerCase()] = true;
+
+    if (
+        evento.key.toLowerCase() === "e" &&
+        jogoIniciado &&
+        !evento.repeat
+    ) {
+        entrarOuSairDoCarro();
+    }
+}
+
+function aoSoltar(evento) {
+    teclas[evento.key.toLowerCase()] = false;
+}
+
+function entrarOuSairDoCarro() {
+    if (dentroDoCarro) {
+        dentroDoCarro = false;
+        jogador.visible = true;
+
+        jogador.position.set(
+            carro.position.x + 3,
+            0,
+            carro.position.z
+        );
+
+        mostrarMensagem("Você saiu do carro.");
+        return;
+    }
+
+    const distancia =
+        jogador.position.distanceTo(carro.position);
+
+    if (distancia < 6) {
+        dentroDoCarro = true;
+        jogador.visible = false;
+
+        mostrarMensagem("Você entrou no carro.");
+    } else {
+        mostrarMensagem("Chegue mais perto do carro.");
+    }
+}
+
+function moverJogador(delta) {
+    let velocidade = teclas.shift ? 10 : 6;
+
+    const direcao = new THREE.Vector3();
+
+    if (teclas.w) direcao.z -= 1;
+    if (teclas.s) direcao.z += 1;
+    if (teclas.a) direcao.x -= 1;
+    if (teclas.d) direcao.x += 1;
+
+    if (direcao.length() === 0) {
+        return;
+    }
+
+    direcao.normalize();
+
+    const novaX =
+        jogador.position.x +
+        direcao.x * velocidade * delta;
+
+    const novaZ =
+        jogador.position.z +
+        direcao.z * velocidade * delta;
+
+    if (!colidiuComPredio(novaX, novaZ)) {
+        jogador.position.x = novaX;
+        jogador.position.z = novaZ;
+    }
+
+    jogador.rotation.y =
+        Math.atan2(direcao.x, direcao.z);
+}
+
+function moverCarro(delta) {
+    let velocidade = 0;
+
+    if (teclas.w) velocidade = 20;
+    if (teclas.s) velocidade = -10;
+
+    if (teclas.a) {
+        carro.rotation.y += 1.8 * delta;
+    }
+
+    if (teclas.d) {
+        carro.rotation.y -= 1.8 * delta;
+    }
+
+    const frente = new THREE.Vector3(
+        Math.sin(carro.rotation.y),
+        0,
+        Math.cos(carro.rotation.y)
+    );
+
+    const novaX =
+        carro.position.x +
+        frente.x * velocidade * delta;
+
+    const novaZ =
+        carro.position.z +
+        frente.z * velocidade * delta;
+
+    if (!colidiuComPredio(novaX, novaZ, 2.3)) {
+        carro.position.x = novaX;
+        carro.position.z = novaZ;
+    }
+}
+
+function colidiuComPredio(x, z, margem = 0.8) {
+    return obstaculos.some(obstaculo => {
+        return (
+            x >
+                obstaculo.x -
+                obstaculo.largura / 2 -
+                margem &&
+            x <
+                obstaculo.x +
+                obstaculo.largura / 2 +
+                margem &&
+            z >
+                obstaculo.z -
+                obstaculo.profundidade / 2 -
+                margem &&
+            z <
+                obstaculo.z +
+                obstaculo.profundidade / 2 +
+                margem
+        );
+    });
+}
+
+function verificarMissao() {
+    const objetoControlado =
+        dentroDoCarro ? carro : jogador;
+
+    const distancia =
+        objetoControlado.position.distanceTo(
+            marcador.position
+        );
+
+    if (distancia < 5) {
+        dinheiro += 500;
+        missaoAtual++;
+
+        marcador.position.copy(
+            pontosMissoes[
+                missaoAtual % pontosMissoes.length
+            ]
+        );
+
+        mostrarMensagem(
+            "Missão concluída! Você ganhou $500."
+        );
+
+        atualizarHUD();
+        salvarJogo();
+    }
+}
+
+function atualizarCamera() {
+    const alvo = dentroDoCarro ? carro : jogador;
+
+    const distancia = dentroDoCarro ? 13 : 9;
+    const altura = dentroDoCarro ? 8 : 6;
+
+    const deslocamento = new THREE.Vector3(
+        -Math.sin(alvo.rotation.y) * distancia,
+        altura,
+        -Math.cos(alvo.rotation.y) * distancia
+    );
+
+    const posicaoDesejada =
+        alvo.position.clone().add(deslocamento);
+
+    camera.position.lerp(
+        posicaoDesejada,
+        0.08
+    );
+
+    camera.lookAt(
+        alvo.position.x,
+        alvo.position.y + 1.2,
+        alvo.position.z
+    );
+}
+
+function atualizarHUD() {
+    nomeHud.textContent = nomeJogador;
+    vidaHud.textContent = "❤️ Vida: " + vida;
+
+    dinheiroHud.textContent =
+        "$" + dinheiro.toLocaleString("pt-BR");
+
+    missaoHud.textContent =
+        "Missão: vá até o círculo amarelo";
+}
+
+let temporizadorMensagem;
+
+function mostrarMensagem(texto) {
+    mensagem.textContent = texto;
+    mensagem.classList.remove("oculto");
+
+    clearTimeout(temporizadorMensagem);
+
+    temporizadorMensagem = setTimeout(() => {
+        mensagem.classList.add("oculto");
+    }, 2500);
+}
+
+function animar() {
+    requestAnimationFrame(animar);
+
+    const delta = Math.min(
+        clock.getDelta(),
+        0.05
+    );
+
+    marcador.rotation.y += delta;
+
+    if (jogoIniciado) {
+        if (dentroDoCarro) {
+            moverCarro(delta);
+        } else {
+            moverJogador(delta);
+        }
+
+        verificarMissao();
+        atualizarCamera();
+    }
+
+    renderer.render(scene, camera);
+}
+
+function redimensionar() {
+    camera.aspect =
+        window.innerWidth /
+        window.innerHeight;
+
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(
+        window.innerWidth,
+        window.innerHeight
+    );
+}
+
+setInterval(() => {
+    salvarJogo();
+}, 5000);
+      
