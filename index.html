@@ -1,1 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <title>GTA Web Online 3D</title>
+
+    <link rel="stylesheet" href="estilo.css">
+</head>
+
+<body>
+
+    <div id="menu">
+        <div class="menu-caixa">
+            <h1>GTA WEB ONLINE 3D</h1>
+
+            <p>Explore a cidade, dirija e complete missões.</p>
+
+            <input
+                type="text"
+                id="nomeInput"
+                maxlength="20"
+                placeholder="Nome do jogador"
+            >
+
+            <button id="jogarBtn">JOGAR</button>
+            <button id="continuarBtn">CONTINUAR</button>
+            <button id="apagarBtn">APAGAR SAVE</button>
+
+            <small>
+                WASD para andar · Shift para correr · E para entrar no carro
+            </small>
+        </div>
+    </div>
+
+    <div id="hud" class="oculto">
+        <div>
+            <strong id="nomeHud">Jogador</strong>
+            <span id="vidaHud">❤️ Vida: 100</span>
+        </div>
+
+        <div class="hud-direita">
+            <span id="missaoHud">Missão: vá até o círculo amarelo</span>
+            <strong id="dinheiroHud">$0</strong>
+        </div>
+    </div>
+
+    <div id="mensagem" class="oculto"></div>
+
+    <div id="controles" class="oculto">
+        WASD: mover · Shift: correr · E: entrar/sair
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.167.1/build/three.min.js"></script>
+    <script src="script.js"></script>
+
+</body>
+</html>
