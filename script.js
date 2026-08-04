@@ -1,228 +1,25 @@
 (() => {
-  "use strict";
-
-  const $ = (id) => document.getElementById(id);
-  const menu = $("menu");
-  const hud = $("hud");
-  const controles = $("controles");
-  const mensagem = $("mensagem");
-  const nomeInput = $("nomeInput");
-  const nomeHud = $("nomeHud");
-  const vidaHud = $("vidaHud");
-  const dinheiroHud = $("dinheiroHud");
-  const missaoHud = $("missaoHud");
-  const salvarChave = "gtaWebOnline3D_save";
-
-  let scene, camera, renderer, jogador, carro, alvoMissao;
-  let jogando = false;
-  let noCarro = false;
-  let vida = 100;
-  let dinheiro = 0;
-  let nome = "Jogador";
-  let missao = 1;
-  const teclas = {};
-  const relogio = new THREE.Clock();
-
-  function caixa(cor, largura, altura, profundidade) {
-    const material = new THREE.MeshLambertMaterial({ color: cor });
-    const geometria = new THREE.BoxGeometry(largura, altura, profundidade);
-    const objeto = new THREE.Mesh(geometria, material);
-    objeto.castShadow = true;
-    objeto.receiveShadow = true;
-    return objeto;
-  }
-
-  function iniciarCena() {
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87b9df);
-    scene.fog = new THREE.Fog(0x87b9df, 70, 210);
-
-    camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.1, 500);
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(innerWidth, innerHeight);
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    document.body.appendChild(renderer.domElement);
-
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x4d6338, 2.2));
-    const sol = new THREE.DirectionalLight(0xffffff, 2.6);
-    sol.position.set(35, 60, 25);
-    sol.castShadow = true;
-    scene.add(sol);
-
-    const chao = caixa(0x477d3a, 240, 1, 240);
-    chao.position.y = -0.5;
-    scene.add(chao);
-
-    const rua1 = caixa(0x30343a, 220, 0.06, 15);
-    rua1.position.y = 0.03;
-    scene.add(rua1);
-    const rua2 = caixa(0x30343a, 15, 0.07, 220);
-    rua2.position.y = 0.04;
-    scene.add(rua2);
-
-    criarCidade();
-    criarJogador();
-    criarCarro();
-    criarMissao();
-    addEventListener("resize", redimensionar);
-    addEventListener("keydown", aoPressionar);
-    addEventListener("keyup", (e) => { teclas[e.code] = false; });
-    animar();
-  }
-
-  function criarCidade() {
-    for (let x = -90; x <= 90; x += 25) {
-      for (let z = -90; z <= 90; z += 25) {
-        if (Math.abs(x) < 13 || Math.abs(z) < 13) continue;
-        const altura = 8 + Math.random() * 25;
-        const predio = caixa(new THREE.Color().setHSL(0.55 + Math.random() * 0.12, 0.25, 0.32 + Math.random() * 0.2), 14, altura, 14);
-        predio.position.set(x, altura / 2, z);
-        scene.add(predio);
-      }
-    }
-  }
-
-  function criarJogador() {
-    jogador = new THREE.Group();
-    const corpo = caixa(0x2266dd, 1.2, 2.1, 0.8);
-    corpo.position.y = 1.65;
-    jogador.add(corpo);
-    const cabeca = new THREE.Mesh(new THREE.SphereGeometry(0.48, 16, 12), new THREE.MeshLambertMaterial({ color: 0xe2ae7b }));
-    cabeca.position.y = 3.05;
-    jogador.add(cabeca);
-    jogador.position.set(0, 0, 8);
-    scene.add(jogador);
-  }
-
-  function criarCarro() {
-    carro = new THREE.Group();
-    const base = caixa(0xd52d2d, 4, 1, 7);
-    base.position.y = 0.9;
-    carro.add(base);
-    const teto = caixa(0xb91f1f, 3.2, 1.1, 3.3);
-    teto.position.set(0, 1.85, -0.4);
-    carro.add(teto);
-    carro.position.set(7, 0, 7);
-    scene.add(carro);
-  }
-
-  function criarMissao() {
-    if (alvoMissao) scene.remove(alvoMissao);
-    const geo = new THREE.TorusGeometry(3, 0.35, 12, 40);
-    alvoMissao = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xffdd00 }));
-    alvoMissao.rotation.x = Math.PI / 2;
-    const pontos = [[45, 0.5, 0], [-45, 0.5, 0], [0, 0.5, -50], [0, 0.5, 55]];
-    const p = pontos[(missao - 1) % pontos.length];
-    alvoMissao.position.set(...p);
-    scene.add(alvoMissao);
-    missaoHud.textContent = `Missão ${missao}: vá até o círculo amarelo`;
-  }
-
-  function aoPressionar(e) {
-    teclas[e.code] = true;
-    if (e.code === "KeyE" && jogando) {
-      const distancia = jogador.position.distanceTo(carro.position);
-      if (!noCarro && distancia < 6) {
-        noCarro = true;
-        jogador.visible = false;
-        mostrarMensagem("Você entrou no carro!");
-      } else if (noCarro) {
-        noCarro = false;
-        jogador.visible = true;
-        jogador.position.copy(carro.position).add(new THREE.Vector3(4, 0, 0));
-        mostrarMensagem("Você saiu do carro.");
-      }
-    }
-  }
-
-  function atualizar(delta) {
-    if (!jogando) return;
-    const personagem = noCarro ? carro : jogador;
-    let frente = 0;
-    let lado = 0;
-    if (teclas.KeyW || teclas.ArrowUp) frente -= 1;
-    if (teclas.KeyS || teclas.ArrowDown) frente += 1;
-    if (teclas.KeyA || teclas.ArrowLeft) lado -= 1;
-    if (teclas.KeyD || teclas.ArrowRight) lado += 1;
-    const velocidade = noCarro ? 22 : (teclas.ShiftLeft || teclas.ShiftRight ? 11 : 6);
-    const movimento = new THREE.Vector3(lado, 0, frente);
-    if (movimento.lengthSq()) {
-      movimento.normalize().multiplyScalar(velocidade * delta);
-      personagem.position.add(movimento);
-      personagem.rotation.y = Math.atan2(movimento.x, movimento.z);
-    }
-    personagem.position.x = THREE.MathUtils.clamp(personagem.position.x, -105, 105);
-    personagem.position.z = THREE.MathUtils.clamp(personagem.position.z, -105, 105);
-    if (noCarro) jogador.position.copy(carro.position);
-
-    const alvoCamera = personagem.position.clone().add(new THREE.Vector3(0, noCarro ? 8 : 6, noCarro ? 13 : 10));
-    camera.position.lerp(alvoCamera, 1 - Math.pow(0.001, delta));
-    camera.lookAt(personagem.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
-
-    alvoMissao.rotation.z += delta;
-    if (personagem.position.distanceTo(alvoMissao.position) < 4.5) {
-      dinheiro += 500;
-      missao += 1;
-      dinheiroHud.textContent = `$${dinheiro}`;
-      mostrarMensagem("Missão completa! +$500");
-      criarMissao();
-      salvar();
-    }
-  }
-
-  function animar() {
-    requestAnimationFrame(animar);
-    atualizar(Math.min(relogio.getDelta(), 0.05));
-    renderer.render(scene, camera);
-  }
-
-  function comecar(dados) {
-    nome = dados?.nome || nomeInput.value.trim() || "Jogador";
-    dinheiro = dados?.dinheiro || 0;
-    missao = dados?.missao || 1;
-    vida = dados?.vida || 100;
-    if (dados?.posicao) jogador.position.set(dados.posicao.x, 0, dados.posicao.z);
-    nomeHud.textContent = nome;
-    vidaHud.textContent = `❤️ Vida: ${vida}`;
-    dinheiroHud.textContent = `$${dinheiro}`;
-    criarMissao();
-    menu.classList.add("oculto");
-    hud.classList.remove("oculto");
-    controles.classList.remove("oculto");
-    jogando = true;
-    salvar();
-  }
-
-  function salvar() {
-    if (!jogando) return;
-    const p = noCarro ? carro.position : jogador.position;
-    localStorage.setItem(salvarChave, JSON.stringify({ nome, dinheiro, missao, vida, posicao: { x: p.x, z: p.z } }));
-  }
-
-  function mostrarMensagem(texto) {
-    mensagem.textContent = texto;
-    mensagem.classList.remove("oculto");
-    clearTimeout(mensagem.timer);
-    mensagem.timer = setTimeout(() => mensagem.classList.add("oculto"), 2400);
-  }
-
-  function redimensionar() {
-    camera.aspect = innerWidth / innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
-  }
-
-  $("jogarBtn").addEventListener("click", () => comecar());
-  $("continuarBtn").addEventListener("click", () => {
-    const dados = JSON.parse(localStorage.getItem(salvarChave) || "null");
-    if (dados) comecar(dados);
-    else mostrarMensagem("Nenhum save encontrado.");
-  });
-  $("apagarBtn").addEventListener("click", () => {
-    localStorage.removeItem(salvarChave);
-    mostrarMensagem("Save apagado.");
-  });
-  addEventListener("beforeunload", salvar);
-  iniciarCena();
+"use strict";const $=id=>document.getElementById(id),canvas=$("game"),ctx=canvas.getContext("2d"),mini=$("mapa"),mctx=mini.getContext("2d");
+const mapa=["1111111111111111","1000000000000001","1011100010111001","1000100000100001","1000101110100001","1000001000000001","1011001000110101","1000000000010001","1010110010010101","1000010000000001","1010010111100101","1000000000000001","1001110001110001","1000010000010001","1000000000000001","1111111111111111"],W=16,H=16,FOV=Math.PI/3;
+let j,bots,teclas={},jogando=false,pausado=false,recarregando=false,ultimo=0,onda=1,pontos=0,tremor=0;
+const parede=(x,y)=>mapa[Math.floor(y)]?.[Math.floor(x)]!=="0",mostrar=(id,sim)=>$(id).classList.toggle("oculto",!sim);
+function aviso(t){$("mensagem").textContent=t;clearTimeout(aviso.t);aviso.t=setTimeout(()=>$("mensagem").textContent="",1800)}
+function redimensionar(){canvas.width=innerWidth*devicePixelRatio;canvas.height=innerHeight*devicePixelRatio;canvas.style.width=innerWidth+"px";canvas.style.height=innerHeight+"px"}
+function iniciar(){j={x:1.7,y:1.7,a:0,vida:100,balas:30,reserva:120,cooldown:0,nome:$("nome").value.trim()||"Agente"};bots=[];onda=1;pontos=0;jogando=true;pausado=false;recarregando=false;mostrar("menu",false);mostrar("fim",false);mostrar("pausa",false);mostrar("hud",true);$("agente").textContent=j.nome.toUpperCase();criarOnda();hud();canvas.requestPointerLock?.();ultimo=performance.now();requestAnimationFrame(loop)}
+function criarOnda(){const livres=[];for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if(!parede(x+.5,y+.5)&&Math.hypot(x-j.x,y-j.y)>5)livres.push([x+.5,y+.5]);for(let i=0;i<3+onda*2;i++){const p=livres[(Math.random()*livres.length)|0];bots.push({x:p[0],y:p[1],vida:70+onda*12,max:70+onda*12,vel:.55+onda*.035,ataque:Math.random(),vivo:true,flash:0})}j.reserva=Math.min(180,j.reserva+30);$("onda").textContent=`ONDA ${onda}`;aviso(`Onda ${onda}: ${bots.length} inimigos`)}
+function mover(dx,dy){const r=.22;if(!parede(j.x+dx+Math.sign(dx)*r,j.y))j.x+=dx;if(!parede(j.x,j.y+dy+Math.sign(dy)*r))j.y+=dy}
+function atualizar(dt){if(!jogando||pausado)return;j.cooldown=Math.max(0,j.cooldown-dt);tremor*=Math.pow(.02,dt);let f=(teclas.KeyW?1:0)-(teclas.KeyS?1:0),l=(teclas.KeyD?1:0)-(teclas.KeyA?1:0),v=(teclas.ShiftLeft?3.25:2.25)*dt;if(f||l){const n=Math.hypot(f,l);f/=n;l/=n;mover((Math.cos(j.a)*f+Math.cos(j.a+Math.PI/2)*l)*v,(Math.sin(j.a)*f+Math.sin(j.a+Math.PI/2)*l)*v)}for(const b of bots){if(!b.vivo)continue;b.flash=Math.max(0,b.flash-dt);b.ataque-=dt;const dx=j.x-b.x,dy=j.y-b.y,d=Math.hypot(dx,dy);if(d>.7){const s=b.vel*dt,nx=b.x+dx/d*s,ny=b.y+dy/d*s;if(!parede(nx,b.y))b.x=nx;if(!parede(b.x,ny))b.y=ny}if(d<1.05&&b.ataque<=0){dano(7+onda*2);b.ataque=.65+Math.random()*.5}}if(bots.length&&bots.every(b=>!b.vivo)){bots=[];onda++;setTimeout(()=>jogando&&criarOnda(),900)}hud()}
+function dano(n){j.vida=Math.max(0,j.vida-n);tremor=7;$("dano").classList.remove("pisca");void $("dano").offsetWidth;$("dano").classList.add("pisca");if(!j.vida)encerrar()}
+function recarregar(){if(recarregando||j.balas===30||!j.reserva||!jogando)return;recarregando=true;aviso("Recarregando...");setTimeout(()=>{if(!jogando)return;const n=Math.min(30-j.balas,j.reserva);j.balas+=n;j.reserva-=n;recarregando=false;hud()},1250)}
+function visivel(tx,ty){const d=Math.hypot(tx-j.x,ty-j.y),n=Math.ceil(d*12);for(let i=1;i<n;i++){const t=i/n;if(parede(j.x+(tx-j.x)*t,j.y+(ty-j.y)*t))return false}return true}
+function atirar(){if(!jogando||pausado||recarregando||j.cooldown)return;if(!j.balas){aviso("Sem munição — pressione R");recarregar();return}j.balas--;j.cooldown=.12;tremor=2;let alvo=null,dist=99;for(const b of bots){if(!b.vivo)continue;let a=Math.atan2(b.y-j.y,b.x-j.x)-j.a;a=Math.atan2(Math.sin(a),Math.cos(a));const d=Math.hypot(b.x-j.x,b.y-j.y);if(Math.abs(a)<.045+.16/d&&d<dist&&visivel(b.x,b.y)){alvo=b;dist=d}}if(alvo){alvo.vida-=34;alvo.flash=.08;if(alvo.vida<=0){alvo.vivo=false;pontos+=100+onda*20;aviso("Inimigo eliminado!")}else pontos+=15}hud()}
+function raio(a){let x=j.x,y=j.y,d=0;while(d<24){x+=Math.cos(a)*.025;y+=Math.sin(a)*.025;d+=.025;if(parede(x,y))break}return{d,x,y}}
+function render(){const w=canvas.width,h=canvas.height,s=(Math.random()-.5)*tremor*devicePixelRatio;ctx.save();ctx.translate(s,s);let g=ctx.createLinearGradient(0,0,0,h/2);g.addColorStop(0,"#172331");g.addColorStop(1,"#526779");ctx.fillStyle=g;ctx.fillRect(-10,-10,w+20,h/2+10);g=ctx.createLinearGradient(0,h/2,0,h);g.addColorStop(0,"#30343a");g.addColorStop(1,"#111418");ctx.fillStyle=g;ctx.fillRect(-10,h/2,w+20,h/2+10);const z=new Float32Array(w);for(let x=0;x<w;x+=2){const a=j.a-FOV/2+x/w*FOV,r=raio(a),d=r.d*Math.cos(a-j.a),alt=Math.min(h*1.4,h/d),lum=Math.max(25,180-d*8),c=((Math.floor(r.x*2)+Math.floor(r.y*2))&1)?lum:lum*.82;ctx.fillStyle=`rgb(${c*.62},${c*.72},${c*.78})`;ctx.fillRect(x,h/2-alt/2,2,alt);z[x]=z[x+1]=d}for(const o of bots.filter(b=>b.vivo).map(b=>({b,d:Math.hypot(b.x-j.x,b.y-j.y)})).sort((a,b)=>b.d-a.d)){let a=Math.atan2(o.b.y-j.y,o.b.x-j.x)-j.a;a=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(a)>FOV*.7||!visivel(o.b.x,o.b.y))continue;const sx=(a/FOV+.5)*w,t=Math.min(h*.9,h/o.d*.82),left=sx-t*.28;if(z[Math.max(0,Math.min(w-1,sx|0))]<o.d)continue;bot(left,h/2-t*.48,t*.56,t,o.b)}arma(w,h);ctx.restore();minimapa()}
+function bot(x,y,w,h,b){ctx.fillStyle=b.flash?"#fff":"#242a30";ctx.fillRect(x+w*.18,y+h*.28,w*.64,h*.5);ctx.fillStyle=b.flash?"#fff":"#bd8e67";ctx.beginPath();ctx.arc(x+w/2,y+h*.2,w*.2,0,Math.PI*2);ctx.fill();ctx.fillStyle="#15191c";ctx.fillRect(x,y+h*.34,w*.2,h*.48);ctx.fillRect(x+w*.8,y+h*.34,w*.2,h*.48);ctx.fillRect(x+w*.2,y+h*.75,w*.22,h*.25);ctx.fillRect(x+w*.58,y+h*.75,w*.22,h*.25);ctx.fillStyle="#d32f2f";ctx.fillRect(x,y-8,w,4);ctx.fillStyle="#52d273";ctx.fillRect(x,y-8,w*Math.max(0,b.vida/b.max),4)}
+function arma(w,h){ctx.fillStyle="#15191d";ctx.beginPath();ctx.moveTo(w*.58,h);ctx.lineTo(w*.53,h*.72);ctx.lineTo(w*.68,h*.69);ctx.lineTo(w*.78,h);ctx.fill();ctx.fillStyle="#3e474e";ctx.fillRect(w*.555,h*.68,w*.11,h*.08);if(j.cooldown>.07){ctx.fillStyle="#ffd35a";ctx.beginPath();ctx.arc(w*.61,h*.65,h*.045,0,Math.PI*2);ctx.fill()}}
+function minimapa(){const s=mini.width/W;mctx.fillStyle="#071015";mctx.fillRect(0,0,150,150);mctx.fillStyle="#6c7b84";for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(mapa[y][x]==="1")mctx.fillRect(x*s,y*s,s,s);mctx.fillStyle="#ef4242";for(const b of bots)if(b.vivo)mctx.fillRect(b.x*s-2,b.y*s-2,4,4);mctx.fillStyle="#52e089";mctx.beginPath();mctx.arc(j.x*s,j.y*s,4,0,Math.PI*2);mctx.fill()}
+function hud(){$("vida").textContent=Math.ceil(j.vida);$("vidaBarra").style.width=j.vida+"%";$("balas").textContent=String(j.balas).padStart(2,"0");$("reserva").textContent=j.reserva;$("pontos").textContent=String(pontos).padStart(6,"0")}
+function encerrar(){jogando=false;document.exitPointerLock?.();const rec=Math.max(+(localStorage.miniCSRecorde||0),pontos);localStorage.miniCSRecorde=rec;$("resultado").innerHTML=`Pontos: <b>${pontos}</b><br>Onda: <b>${onda}</b><br>Recorde: <b>${rec}</b>`;mostrar("fim",true);mostrar("hud",false)}
+function loop(t){if(!jogando)return;const dt=Math.min((t-ultimo)/1000,.05);ultimo=t;atualizar(dt);render();requestAnimationFrame(loop)}
+addEventListener("resize",redimensionar);addEventListener("keydown",e=>{teclas[e.code]=true;if(e.code==="KeyR")recarregar()});addEventListener("keyup",e=>teclas[e.code]=false);addEventListener("mousemove",e=>{if(jogando&&!pausado&&document.pointerLockElement===canvas)j.a+=e.movementX*.0022});addEventListener("mousedown",e=>{if(e.button===0)atirar()});document.addEventListener("pointerlockchange",()=>{if(jogando){pausado=document.pointerLockElement!==canvas;mostrar("pausa",pausado)}});$("jogar").onclick=iniciar;$("reiniciar").onclick=iniciar;$("voltar").onclick=()=>canvas.requestPointerLock?.();redimensionar();
 })();
