@@ -141,7 +141,8 @@ function humanoid(color = 0x278ce8, scale = 1) {
 const player = humanoid(0x278ce8);
 scene.add(player);
 let yaw = 0,
-  pitch = 0,
+  camYaw = 0,
+  camPitch = 0.28,
   hp = 100,
   score = 0,
   wave = 1,
@@ -182,6 +183,8 @@ function shoot() {
   if (!playing || cool || !ammo) return;
   ammo--;
   cool = 0.13;
+  yaw = camYaw;
+  player.rotation.y = yaw;
   const dir = new THREE.Vector3();
   camera.getWorldDirection(dir);
   const b = box(
@@ -228,7 +231,14 @@ function update(dt) {
   if (gp) {
     x += Math.abs(gp.axes[0]) > 0.16 ? gp.axes[0] : 0;
     z += Math.abs(gp.axes[1]) > 0.16 ? gp.axes[1] : 0;
-    yaw -= Math.abs(gp.axes[2]) > 0.16 ? gp.axes[2] * dt * 2.4 : 0;
+    camYaw -= Math.abs(gp.axes[2]) > 0.16 ? gp.axes[2] * dt * 2.4 : 0;
+    camPitch = Math.max(
+      -0.25,
+      Math.min(
+        1.05,
+        camPitch + (Math.abs(gp.axes[3]) > 0.16 ? gp.axes[3] * dt * 1.8 : 0),
+      ),
+    );
     if (gp.buttons[7]?.pressed) shoot();
     if (gp.buttons[0]?.pressed && grounded) {
       vy = 8.8;
@@ -240,13 +250,15 @@ function update(dt) {
   if (x || z) {
     const n = Math.hypot(x, z),
       speed = (keys.ShiftLeft ? 11 : 6) * (dash > 1.15 ? 2.4 : 1),
-      f = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)),
+      f = new THREE.Vector3(Math.sin(camYaw), 0, Math.cos(camYaw)),
       r = new THREE.Vector3(f.z, 0, -f.x),
-      next = player.position
+      move = f
         .clone()
-        .addScaledVector(f, (-z / n) * speed * dt)
-        .addScaledVector(r, (x / n) * speed * dt);
+        .multiplyScalar(-z / n)
+        .addScaledVector(r, x / n),
+      next = player.position.clone().addScaledVector(move, speed * dt);
     if (!hitWalls(next)) player.position.copy(next);
+    yaw = Math.atan2(move.x, move.z);
   }
   vy -= 22 * dt;
   player.position.y += vy * dt;
@@ -311,18 +323,14 @@ function update(dt) {
       .clone()
       .add(
         new THREE.Vector3(
-          -Math.sin(yaw) * cameraDistance,
-          3.7 + Math.sin(pitch) * 3,
-          -Math.cos(yaw) * cameraDistance,
+          -Math.sin(camYaw) * cameraDistance * Math.cos(camPitch),
+          2.2 + Math.sin(camPitch) * cameraDistance,
+          -Math.cos(camYaw) * cameraDistance * Math.cos(camPitch),
         ),
       ),
     0.12,
   );
-  camera.lookAt(
-    player.position
-      .clone()
-      .add(new THREE.Vector3(0, 1.6 + Math.sin(pitch) * 2, 0)),
-  );
+  camera.lookAt(player.position.clone().add(new THREE.Vector3(0, 1.6, 0)));
   $("#hp").textContent = Math.max(0, Math.ceil(hp));
   $("#score").textContent = score;
   $("#ammo").textContent = `${ammo} / ${reserve}`;
@@ -376,8 +384,8 @@ addEventListener("keydown", (e) => {
 addEventListener("keyup", (e) => (keys[e.code] = 0));
 addEventListener("mousemove", (e) => {
   if (document.pointerLockElement) {
-    yaw -= e.movementX * 0.0024;
-    pitch = Math.max(-1, Math.min(1, pitch - e.movementY * 0.002));
+    camYaw -= e.movementX * 0.0024;
+    camPitch = Math.max(-0.25, Math.min(1.05, camPitch - e.movementY * 0.002));
   }
 });
 addEventListener("mousedown", (e) => {
