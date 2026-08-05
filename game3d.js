@@ -67,13 +67,40 @@ function humanoid(color = 0x278ce8, scale = 1) {
     return p;
   };
   const torso = part(
-    new THREE.BoxGeometry(1.05, 1.25, 0.58),
+    new THREE.CapsuleGeometry(0.5, 0.62, 8, 16),
     cloth,
     0,
     1.85,
     0,
   );
-  part(new THREE.SphereGeometry(0.36, 16, 12), skin, 0, 2.82, 0);
+  torso.scale.set(1, 0.95, 0.7);
+  part(new THREE.CylinderGeometry(0.16, 0.18, 0.22, 12), skin, 0, 2.53, 0);
+  const head = part(new THREE.SphereGeometry(0.38, 24, 18), skin, 0, 2.87, 0);
+  head.scale.set(0.9, 1.08, 0.92);
+  const hair = part(
+    new THREE.SphereGeometry(0.39, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.48),
+    dark,
+    0,
+    3.02,
+    0,
+  );
+  const eyeMat = mat(0x16212a);
+  part(new THREE.SphereGeometry(0.035, 8, 6), eyeMat, -0.13, 2.92, 0.34);
+  part(new THREE.SphereGeometry(0.035, 8, 6), eyeMat, 0.13, 2.92, 0.34);
+  part(
+    new THREE.CapsuleGeometry(0.18, 0.75, 6, 12),
+    cloth,
+    -0.62,
+    2.15,
+    0,
+  ).rotation.z = -0.2;
+  part(
+    new THREE.CapsuleGeometry(0.18, 0.75, 6, 12),
+    cloth,
+    0.62,
+    2.15,
+    0,
+  ).rotation.z = 0.2;
   const armL = new THREE.Group(),
     armR = new THREE.Group(),
     legL = new THREE.Group(),
@@ -83,16 +110,35 @@ function humanoid(color = 0x278ce8, scale = 1) {
   legL.position.set(-0.28, 1.18, 0);
   legR.position.set(0.28, 1.18, 0);
   g.add(armL, armR, legL, legR);
-  part(new THREE.BoxGeometry(0.3, 1.15, 0.3), skin, 0, -0.5, 0, armL);
-  part(new THREE.BoxGeometry(0.3, 1.15, 0.3), skin, 0, -0.5, 0, armR);
-  part(new THREE.BoxGeometry(0.4, 1.3, 0.45), dark, 0, -0.58, 0, legL);
-  part(new THREE.BoxGeometry(0.4, 1.3, 0.45), dark, 0, -0.58, 0, legR);
+  part(new THREE.CapsuleGeometry(0.14, 0.72, 6, 12), skin, 0, -0.48, 0, armL);
+  part(new THREE.SphereGeometry(0.17, 12, 8), skin, 0, -1.02, 0, armL);
+  part(new THREE.CapsuleGeometry(0.14, 0.72, 6, 12), skin, 0, -0.48, 0, armR);
+  part(new THREE.SphereGeometry(0.17, 12, 8), skin, 0, -1.02, 0, armR);
+  part(new THREE.CapsuleGeometry(0.2, 0.82, 6, 12), dark, 0, -0.54, 0, legL);
+  const footL = part(
+    new THREE.SphereGeometry(0.24, 12, 8),
+    dark,
+    0,
+    -1.13,
+    0.12,
+    legL,
+  );
+  footL.scale.set(0.9, 0.65, 1.45);
+  part(new THREE.CapsuleGeometry(0.2, 0.82, 6, 12), dark, 0, -0.54, 0, legR);
+  const footR = part(
+    new THREE.SphereGeometry(0.24, 12, 8),
+    dark,
+    0,
+    -1.13,
+    0.12,
+    legR,
+  );
+  footR.scale.set(0.9, 0.65, 1.45);
   g.userData = { torso, armL, armR, legL, legR, walk: Math.random() * 6.28 };
   g.scale.setScalar(scale);
   return g;
 }
 const player = humanoid(0x278ce8);
-scene.add(player);
 scene.add(player);
 let yaw = 0,
   pitch = 0,
