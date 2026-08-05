@@ -164,11 +164,11 @@ function enemy(boss = false) {
   const a = Math.random() * Math.PI * 2,
     r = 35 + Math.random() * 30;
   g.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
-  g.userData = {
+  Object.assign(g.userData, {
     hp: boss ? 450 + wave * 60 : 45 + wave * 10,
     boss,
     speed: boss ? 2.2 : 3 + wave * 0.12,
-  };
+  });
   scene.add(g);
   enemies.push(g);
 }
