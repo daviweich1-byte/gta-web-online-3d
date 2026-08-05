@@ -2,92 +2,176 @@
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Mini CS Rivals</title>
-    <link rel="stylesheet" href="estilo.css?v=cs3" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <title>Mini CS Rivals 3D</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #071018;
+        color: #fff;
+        font: 600 15px Arial;
+      }
+      canvas {
+        display: block;
+      }
+      .hide {
+        display: none !important;
+      }
+      .ui {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+      }
+      .top,
+      .bottom {
+        position: absolute;
+        left: 0;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        padding: 18px 22px;
+        text-shadow: 0 2px 5px #000;
+      }
+      .top {
+        top: 0;
+        background: linear-gradient(#000b, transparent);
+      }
+      .bottom {
+        bottom: 0;
+        align-items: end;
+        background: linear-gradient(transparent, #000c);
+      }
+      .stat {
+        font-size: 22px;
+        color: #71e89a;
+      }
+      .ammo {
+        font-size: 30px;
+      }
+      .menu {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: radial-gradient(circle, #173344dd, #020508ee);
+        z-index: 5;
+      }
+      .card {
+        width: min(92vw, 520px);
+        padding: 32px;
+        text-align: center;
+        background: #08131bea;
+        border: 1px solid #61d6ff55;
+        border-top: 4px solid #48c5f2;
+        box-shadow: 0 30px 100px #000;
+      }
+      .card h1 {
+        font-size: 48px;
+        margin: 0;
+        color: #48c5f2;
+      }
+      .card button {
+        width: 100%;
+        height: 52px;
+        border: 0;
+        background: #48c5f2;
+        font-weight: 900;
+        font-size: 16px;
+      }
+      .controls {
+        color: #c7d5dd;
+        line-height: 1.8;
+      }
+      .mobile {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+      }
+      .pad,
+      .actions {
+        position: absolute;
+        bottom: 24px;
+        display: grid;
+        gap: 8px;
+        pointer-events: auto;
+      }
+      .pad {
+        left: 18px;
+        grid-template-columns: repeat(3, 52px);
+      }
+      .actions {
+        right: 18px;
+        grid-template-columns: repeat(2, 60px);
+      }
+      .mobile button {
+        height: 52px;
+        border: 1px solid #fff5;
+        background: #071018aa;
+        color: #fff;
+        border-radius: 12px;
+        font-weight: bold;
+      }
+      .pad button:first-child {
+        grid-column: 2;
+      }
+      .on {
+        background: #48c5f288 !important;
+      }
+      @media (pointer: fine) {
+        .mobile {
+          display: none;
+        }
+      }
+    </style>
   </head>
-  <body>
-    <canvas id="game"></canvas>
-    <section id="menu" class="painel">
-      <div class="card">
-        <span class="tag">CS + RIVALS · BOTS</span>
-        <h1>MINI <b>CS</b></h1>
-        <p>Partidas rápidas, movimento avançado, arsenal e ranking local.</p>
-        <input
-          id="nome"
-          maxlength="16"
-          placeholder="Codinome"
-          value="Agente"
-        /><input
-          id="email"
-          type="email"
-          placeholder="E-mail opcional para salvar o perfil"
-        />
-        <div class="seletores">
-          <label
-            >ARMA<select id="arma">
-              <option value="rifle">Rifle</option>
-              <option value="smg">SMG</option>
-              <option value="shotgun">Shotgun</option>
-            </select></label
-          ><label
-            >SKIN<select id="skin">
-              <option value="#3e474e">Carbono</option>
-              <option value="#d5a62b">Dourada</option>
-              <option value="#ab38d3">Neon Roxa</option>
-              <option value="#37b8d8">Gelo</option>
-            </select></label
+  <body data-game="cs">
+    <div id="hud" class="ui hide">
+      <div class="top">
+        <div>
+          MINI CS RIVALS 3D<br /><span class="stat"
+            >VIDA <b id="hp">100</b></span
           >
         </div>
-        <button id="salvarPerfil">SALVAR PERFIL LOCAL</button
-        ><button id="jogar">JOGAR COMO VISITANTE</button>
-        <div class="instrucoes">
-          <span><kbd>WASD</kbd> mover</span><span><kbd>Mouse</kbd> mirar</span
-          ><span><kbd>Click</kbd> atirar</span
-          ><span><kbd>R</kbd> recarregar</span
-          ><span><kbd>Shift</kbd> correr</span
-          ><span><kbd>Espaço</kbd> dash</span>
-        </div>
+        <div id="wave">ONDA 1</div>
+        <div>PONTOS <b id="score">0</b></div>
       </div>
-    </section>
-    <section id="pausa" class="painel oculto">
-      <div class="card pequena">
-        <h2>JOGO PAUSADO</h2>
-        <p>Clique para continuar</p>
-        <button id="voltar">VOLTAR AO COMBATE</button>
+      <div class="bottom">
+        <span
+          >WASD/SETAS mover · Mouse mirar · Clique/Q atirar · R recarregar ·
+          Espaço dash</span
+        ><b class="ammo" id="ammo">30 / 120</b>
       </div>
-    </section>
-    <section id="fim" class="painel oculto">
-      <div class="card pequena">
-        <span class="tag derrota">PARTIDA ENCERRADA</span>
-        <h2>RESULTADO</h2>
-        <p id="resultado"></p>
-        <button id="reiniciar">JOGAR NOVAMENTE</button>
-      </div>
-    </section>
-    <div id="hud" class="oculto">
-      <div class="topo">
-        <span id="agente">AGENTE</span><strong id="onda">ONDA 1</strong
-        ><span id="tempo">03:00</span><span id="pontos">000000</span>
-      </div>
-      <div id="mira"><i></i><i></i><i></i><i></i></div>
-      <div id="dano"></div>
-      <div class="rodape">
-        <div class="status">
-          <small>VIDA</small><strong id="vida">100</strong>
-          <div class="barra"><b id="vidaBarra"></b></div>
-        </div>
-        <div id="mensagem">Prepare-se!</div>
-        <div class="arma">
-          <small id="armaHud">RIFLE</small
-          ><strong
-            ><span id="balas">30</span><em>/</em
-            ><span id="reserva">120</span></strong
-          >
-        </div>
-      </div>
-      <canvas id="mapa" width="150" height="150"></canvas>
     </div>
-    <script src="script.js?v=cs3"></script>
+    <div id="menu" class="menu">
+      <div class="card">
+        <h1>MINI CS 3D</h1>
+        <p>Combate em arena 3D contra esquadrões de bots.</p>
+        <div class="controls">
+          WASD ou setas · Mouse · Clique/Q · R · Shift · Espaço<br />Compatível
+          com teclado, mouse e botões de celular.
+        </div>
+        <button id="play">INICIAR COMBATE</button>
+      </div>
+    </div>
+    <div class="mobile">
+      <div class="pad">
+        <button data-key="KeyW">▲</button><button data-key="KeyA">◀</button
+        ><button data-key="KeyS">▼</button><button data-key="KeyD">▶</button>
+      </div>
+      <div class="actions">
+        <button id="fire">TIRO</button><button data-key="Space">DASH</button
+        ><button data-key="KeyR">RECARGA</button
+        ><button data-key="ShiftLeft">CORRER</button>
+      </div>
+    </div>
+    <script type="module" src="game3d.js?v=5"></script>
   </body>
 </html>
