@@ -1,1 +1,93 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mini CS Rivals</title><link rel="stylesheet" href="estilo.css?v=cs3"></head><body><canvas id="game"></canvas><section id="menu" class="painel"><div class="card"><span class="tag">CS + RIVALS · BOTS</span><h1>MINI <b>CS</b></h1><p>Partidas rápidas, movimento avançado, arsenal e ranking local.</p><input id="nome" maxlength="16" placeholder="Codinome" value="Agente"><input id="email" type="email" placeholder="E-mail opcional para salvar o perfil"><div class="seletores"><label>ARMA<select id="arma"><option value="rifle">Rifle</option><option value="smg">SMG</option><option value="shotgun">Shotgun</option></select></label><label>SKIN<select id="skin"><option value="#3e474e">Carbono</option><option value="#d5a62b">Dourada</option><option value="#ab38d3">Neon Roxa</option><option value="#37b8d8">Gelo</option></select></label></div><button id="salvarPerfil">SALVAR PERFIL LOCAL</button><button id="jogar">JOGAR COMO VISITANTE</button><div class="instrucoes"><span><kbd>WASD</kbd> mover</span><span><kbd>Mouse</kbd> mirar</span><span><kbd>Click</kbd> atirar</span><span><kbd>R</kbd> recarregar</span><span><kbd>Shift</kbd> correr</span><span><kbd>Espaço</kbd> dash</span></div></div></section><section id="pausa" class="painel oculto"><div class="card pequena"><h2>JOGO PAUSADO</h2><p>Clique para continuar</p><button id="voltar">VOLTAR AO COMBATE</button></div></section><section id="fim" class="painel oculto"><div class="card pequena"><span class="tag derrota">PARTIDA ENCERRADA</span><h2>RESULTADO</h2><p id="resultado"></p><button id="reiniciar">JOGAR NOVAMENTE</button></div></section><div id="hud" class="oculto"><div class="topo"><span id="agente">AGENTE</span><strong id="onda">ONDA 1</strong><span id="tempo">03:00</span><span id="pontos">000000</span></div><div id="mira"><i></i><i></i><i></i><i></i></div><div id="dano"></div><div class="rodape"><div class="status"><small>VIDA</small><strong id="vida">100</strong><div class="barra"><b id="vidaBarra"></b></div></div><div id="mensagem">Prepare-se!</div><div class="arma"><small id="armaHud">RIFLE</small><strong><span id="balas">30</span><em>/</em><span id="reserva">120</span></strong></div></div><canvas id="mapa" width="150" height="150"></canvas></div><script src="script.js?v=cs3"></script></body></html>
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Mini CS Rivals</title>
+    <link rel="stylesheet" href="estilo.css?v=cs3" />
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <section id="menu" class="painel">
+      <div class="card">
+        <span class="tag">CS + RIVALS · BOTS</span>
+        <h1>MINI <b>CS</b></h1>
+        <p>Partidas rápidas, movimento avançado, arsenal e ranking local.</p>
+        <input
+          id="nome"
+          maxlength="16"
+          placeholder="Codinome"
+          value="Agente"
+        /><input
+          id="email"
+          type="email"
+          placeholder="E-mail opcional para salvar o perfil"
+        />
+        <div class="seletores">
+          <label
+            >ARMA<select id="arma">
+              <option value="rifle">Rifle</option>
+              <option value="smg">SMG</option>
+              <option value="shotgun">Shotgun</option>
+            </select></label
+          ><label
+            >SKIN<select id="skin">
+              <option value="#3e474e">Carbono</option>
+              <option value="#d5a62b">Dourada</option>
+              <option value="#ab38d3">Neon Roxa</option>
+              <option value="#37b8d8">Gelo</option>
+            </select></label
+          >
+        </div>
+        <button id="salvarPerfil">SALVAR PERFIL LOCAL</button
+        ><button id="jogar">JOGAR COMO VISITANTE</button>
+        <div class="instrucoes">
+          <span><kbd>WASD</kbd> mover</span><span><kbd>Mouse</kbd> mirar</span
+          ><span><kbd>Click</kbd> atirar</span
+          ><span><kbd>R</kbd> recarregar</span
+          ><span><kbd>Shift</kbd> correr</span
+          ><span><kbd>Espaço</kbd> dash</span>
+        </div>
+      </div>
+    </section>
+    <section id="pausa" class="painel oculto">
+      <div class="card pequena">
+        <h2>JOGO PAUSADO</h2>
+        <p>Clique para continuar</p>
+        <button id="voltar">VOLTAR AO COMBATE</button>
+      </div>
+    </section>
+    <section id="fim" class="painel oculto">
+      <div class="card pequena">
+        <span class="tag derrota">PARTIDA ENCERRADA</span>
+        <h2>RESULTADO</h2>
+        <p id="resultado"></p>
+        <button id="reiniciar">JOGAR NOVAMENTE</button>
+      </div>
+    </section>
+    <div id="hud" class="oculto">
+      <div class="topo">
+        <span id="agente">AGENTE</span><strong id="onda">ONDA 1</strong
+        ><span id="tempo">03:00</span><span id="pontos">000000</span>
+      </div>
+      <div id="mira"><i></i><i></i><i></i><i></i></div>
+      <div id="dano"></div>
+      <div class="rodape">
+        <div class="status">
+          <small>VIDA</small><strong id="vida">100</strong>
+          <div class="barra"><b id="vidaBarra"></b></div>
+        </div>
+        <div id="mensagem">Prepare-se!</div>
+        <div class="arma">
+          <small id="armaHud">RIFLE</small
+          ><strong
+            ><span id="balas">30</span><em>/</em
+            ><span id="reserva">120</span></strong
+          >
+        </div>
+      </div>
+      <canvas id="mapa" width="150" height="150"></canvas>
+    </div>
+    <script src="script.js?v=cs3"></script>
+  </body>
+</html>
