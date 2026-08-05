@@ -138,6 +138,15 @@ function update(dt) {
       (keys.KeyS || keys.ArrowDown ? 1 : 0) -
       (keys.KeyW || keys.ArrowUp ? 1 : 0) +
       touch.y;
+  const gp = navigator.getGamepads?.()[0];
+  if (gp) {
+    x += Math.abs(gp.axes[0]) > 0.16 ? gp.axes[0] : 0;
+    z += Math.abs(gp.axes[1]) > 0.16 ? gp.axes[1] : 0;
+    yaw -= Math.abs(gp.axes[2]) > 0.16 ? gp.axes[2] * dt * 2.4 : 0;
+    if (gp.buttons[7]?.pressed) shoot();
+    if (gp.buttons[0]?.pressed && dash <= 0) dash = 1.5;
+    if (gp.buttons[2]?.pressed && mode === "city") inCar = true;
+  }
   if (x || z) {
     const n = Math.hypot(x, z),
       speed = (keys.ShiftLeft ? 11 : 6) * (dash > 1.15 ? 2.4 : 1),
@@ -195,7 +204,11 @@ function update(dt) {
       .add(new THREE.Vector3(-Math.sin(yaw) * 8, 6, -Math.cos(yaw) * 8)),
     0.12,
   );
-  camera.lookAt(player.position.clone().add(new THREE.Vector3(0, 1.3, 0)));
+  camera.lookAt(
+    player.position
+      .clone()
+      .add(new THREE.Vector3(0, 1.3 + Math.sin(pitch) * 4, 0)),
+  );
   $("#hp").textContent = Math.max(0, Math.ceil(hp));
   $("#score").textContent = score;
   $("#ammo").textContent = `${ammo} / ${reserve}`;
